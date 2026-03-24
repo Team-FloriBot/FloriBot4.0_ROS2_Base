@@ -1,7 +1,7 @@
 # FloriBot4.0_ROS2_Base
 Dieses Repository enthält die ROS2-Jazzy-Implementierung der mobilen Basis des FloriBot 4.0. Die Struktur orientiert sich bewusst an der klaren und modularen Organisation des FloriBot_Pi-Projekts, wurde jedoch vollständig neu und systematisch für ROS2 umgesetzt.
 
-## Architektur
+# Architektur
 
 Die Base ist in zwei zentrale Komponenten aufgeteilt:
 
