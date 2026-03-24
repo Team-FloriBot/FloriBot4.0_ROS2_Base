@@ -1,1 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>base</name>
+  <version>0.2.0</version>
+  <description>FloriBot 4.0 articulated base for ROS 2 Jazzy with joint_states bridge based on the existing Advanced_Navigation integration.</description>
+  <maintainer email="student@example.com">FloriBot Team</maintainer>
+  <license>Apache-2.0</license>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>rosidl_default_generators</build_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rcl_interfaces</depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
