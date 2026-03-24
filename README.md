@@ -5,40 +5,41 @@ Dieses Repository enthält die ROS2-Jazzy-Implementierung der mobilen Basis des 
 
 Die Base ist in zwei zentrale Komponenten aufgeteilt:
 
-hardware_node
-Schnittstelle zur realen Hardware über sensor_msgs/JointState.
-Extrahiert:
+<b>hardware_node</b>
 
-Artikulationswinkel (Knickgelenk)
+Schnittstelle zur realen Hardware über sensor_msgs/JointState.
+
+Extrahiert:
+Artikulationswinkel (Knickgelenk),
 Radzustände (Position/Geschwindigkeit)
 
 Publiziert:
-
-/base/articulation_angle
+/base/articulation_angle,
 /base/wheel_ticks4
 
-kinematics_node
-Implementiert die artikulierte Kinematik der Plattform.
-Verarbeitet:
+<b>kinematics_node</b>
 
-cmd_vel
-Gelenkwinkel
+Implementiert die artikulierte Kinematik der Plattform.
+
+Verarbeitet:
+cmd_vel,
+Gelenkwinkel,
 Radzustände
 
 Berechnet:
-
-Soll-Radgeschwindigkeiten (/base/wheel_commands4)
-Odometrie (/odom)
+Soll-Radgeschwindigkeiten (/base/wheel_commands4),
+Odometrie (/odom),
 TF (odom -> base_link)
-Herkunft der Kinematik
+
+# Herkunft der Kinematik
 
 Die mathematische Modellierung basiert auf der bestehenden ROS1-Implementierung aus dem Advanced_Navigation-Repository. Die Softwarearchitektur wurde jedoch vollständig neu strukturiert und an ROS2 angepasst.
 
-Designprinzipien
+# Designprinzipien
 Klare Trennung von Hardware, Kinematik und Kommunikation
 Verwendung standardisierter ROS2-Interfaces (cmd_vel, Odometry, tf)
 Keine Abhängigkeit der Kinematik von TF als Eingangsgröße
 Erweiterbarkeit für Navigation (Nav2) und Sensorfusion
 Ziel
 
-Dieses Paket stellt eine saubere, modulare und erweiterbare Grundlage für die weitere Entwicklung des FloriBot 4.0 in ROS2 dar.
+Dieses Paket stellt eine modulare und erweiterbare Grundlage für die weitere Entwicklung des FloriBot 4.0 in ROS2 dar.
