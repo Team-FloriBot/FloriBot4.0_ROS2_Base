@@ -1,1 +1,19 @@
+/**:
+  ros__parameters:
+    track_width: 0.385
+    wheel_radius: 0.10
+    front_joint_distance: 0.55
+    rear_joint_distance: 0.55
+    ticks_per_rev: 131000.0
+    unwrap_modulo: false
+    modulo_ticks: 131000
+    publish_tf: true
+    odom_source_axle: front
 
+    cmd_vel_topic: /cmd_vel
+    articulation_topic: /base/articulation_angle
+    wheel_cmd_topic: /base/wheel_commands4
+    wheel_ticks_topic: /base/wheel_ticks4
+    odom_topic: /odom
+    odom_frame_id: odom
+    base_frame_id: base_link
