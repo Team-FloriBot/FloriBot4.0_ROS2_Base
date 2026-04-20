@@ -1,17 +1,56 @@
-# FloriBot4.0_ROS2_Base
-Dieses Repository enthält die ROS2-Jazzy-Implementierung der mobilen Basis des FloriBot 4.0. 
+# FloriBot 4.0 - ROS 2 Jazzy Base
 
+Dieses Repository enthält die Basis-Software für den **FloriBot 4.0**, in **ROS 2 Jazzy Jalisco**. Es bildet das Fundament der Robotersteuerung, verwaltet die Hardware-Kommunikation und stellt die Schnittstellen für Navigation und Teleoperation bereit.
 
+## Projektbeschreibung
 
-# Herkunft der Kinematik
+Die `FloriBot4.0_ROS2_Jazzy_Base` dient als Bindeglied zwischen der ROS 2-Umgebung und der physischen Hardware. Das Paket übernimmt die Berechnung der Kinematik, die Aufbereitung der Odometrie-Daten und die Kommunikation mit der speicherprogrammierbaren Steuerung (PLC/SPS).
 
-Die mathematische Modellierung basiert auf der bestehenden ROS1-Implementierung aus dem Advanced_Navigation-Repository. Die Softwarearchitektur wurde jedoch vollständig neu strukturiert und an ROS2 angepasst.
+## Architektur & Module
 
-# Designprinzipien
-Klare Trennung von Hardware, Kinematik und Kommunikation
-Verwendung standardisierter ROS2-Interfaces (cmd_vel, Odometry, tf)
-Keine Abhängigkeit der Kinematik von TF als Eingangsgröße
-Erweiterbarkeit für Navigation (Nav2) und Sensorfusion
-Ziel
+Das System ist in zwei Hauptknoten unterteilt, um eine saubere Trennung zwischen Logik und Hardware-Abstraktion zu gewährleisten:
 
-Dieses Paket stellt eine modulare und erweiterbare Grundlage für die weitere Entwicklung des FloriBot 4.0 in ROS2 dar.
+* **`plc_connection`**: Dieser Knoten ist der direkte Draht zur Hardware. Er kapselt das Kommunikationsprotokoll zur PLC. Er sendet Soll-Geschwindigkeiten an die Motoren und empfängt Ist-Daten (Encoder-Werte) für die Rückkopplung.
+* **`base_node`**: Die Intelligenz der Basis. Dieser Knoten abonniert `cmd_vel` (Twist-Nachrichten), wandelt diese mittels inverser Kinematik in Radgeschwindigkeiten um und gibt sie an den `plc_connection` Node weiter. Gleichzeitig berechnet er die Odometrie-Transformation ($TF$) und publiziert den Status des Roboters.
+
+---
+
+## Installation & Setup
+
+### 1. Repository klonen
+
+```bash
+git clone https://github.com/Team-FloriBot/FloriBot4.0_ROS2_Jazzy_Base.git base_ws
+
+```
+
+### 2. Abhängigkeiten auflösen
+```bash
+cd ~/base_ws
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+
+```
+
+### 3. Projekt bauen
+```bash
+colcon build --symlink-install
+
+```
+
+### 4. Workspace sourcen
+```bash
+source ~/base_ws/install/setup.bash
+
+```
+
+## Nodes starten
+
+```bash
+ros2 launch base base_launch.py
+```
+in neuem Terminal:
+
+```bash
+ros2 launch plc_connection plc_connection_launch.py
+```
