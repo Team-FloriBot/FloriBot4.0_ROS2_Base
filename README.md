@@ -1,35 +1,7 @@
 # FloriBot4.0_ROS2_Base
-Dieses Repository enthält die ROS2-Jazzy-Implementierung der mobilen Basis des FloriBot 4.0. Die Struktur orientiert sich bewusst an der klaren und modularen Organisation des FloriBot_Pi-Projekts, wurde jedoch vollständig neu und systematisch für ROS2 umgesetzt.
+Dieses Repository enthält die ROS2-Jazzy-Implementierung der mobilen Basis des FloriBot 4.0. 
 
-# Architektur
 
-Die Base ist in zwei zentrale Komponenten aufgeteilt:
-
-<b>hardware_node</b>
-
-Schnittstelle zur realen Hardware über sensor_msgs/JointState.
-
-Extrahiert:
-Artikulationswinkel (Knickgelenk),
-Radzustände (Position/Geschwindigkeit)
-
-Publiziert:
-/base/articulation_angle,
-/base/wheel_ticks4
-
-<b>kinematics_node</b>
-
-Implementiert die artikulierte Kinematik der Plattform.
-
-Verarbeitet:
-cmd_vel,
-Gelenkwinkel,
-Radzustände
-
-Berechnet:
-Soll-Radgeschwindigkeiten (/base/wheel_commands4),
-Odometrie (/odom),
-TF (odom -> base_link)
 
 # Herkunft der Kinematik
 
