@@ -73,10 +73,10 @@ ament_export_libraries(articulated_drive basePublisher)
 
 # --- 7. Installation ---
 # Bibliotheken installieren
-install(TARGETS articulated_drive basePublisher
+install(TARGETS articulated_drive basePublisher ${PROJECT_NAME}_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 # Verzeichnisse und Dateien
