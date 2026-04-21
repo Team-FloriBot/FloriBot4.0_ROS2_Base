@@ -3,7 +3,7 @@ project(base)
 
 # Empfehlung: C++17 für modernere ROS2 Distributionen
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 
 # 1. Pakete finden
@@ -59,18 +59,11 @@ ament_target_dependencies(${PROJECT_NAME}_node
   rclcpp tf2_ros std_msgs geometry_msgs nav_msgs sensor_msgs Eigen3
 )
 
-add_executable(angle2tf src/${PROJECT_NAME}_node/angle2tf.cpp)
-target_link_libraries(angle2tf articulated_drive basePublisher)
-ament_target_dependencies(angle2tf 
-  rclcpp tf2_ros std_msgs geometry_msgs nav_msgs sensor_msgs Eigen3
-)
-
 # 5. Interface-Verknüpfung (Damit die Nodes die eigenen Messages finden)
 # WICHTIG: Das muss für alle Ziele gemacht werden, die deine .msg Dateien nutzen
 rosidl_target_interfaces(articulated_drive ${PROJECT_NAME} "rosidl_typesupport_cpp")
 rosidl_target_interfaces(basePublisher ${PROJECT_NAME} "rosidl_typesupport_cpp")
 rosidl_target_interfaces(${PROJECT_NAME}_node ${PROJECT_NAME} "rosidl_typesupport_cpp")
-rosidl_target_interfaces(angle2tf ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 # --- 6. Export für andere Pakete (wie plc_connection) ---
 # Wir exportieren die Bibliotheken und die Runtime für die Messages
@@ -86,17 +79,8 @@ install(TARGETS articulated_drive basePublisher
   RUNTIME DESTINATION bin
 )
 
-# Nodes installieren
-install(TARGETS ${PROJECT_NAME}_node angle2tf
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 # Verzeichnisse und Dateien
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
-install(FILES 
-  mapping_rule_Angle.yaml 
-  mapping_rule_Wheels.yaml 
-  DESTINATION share/${PROJECT_NAME}
-)
+
 
 ament_package()

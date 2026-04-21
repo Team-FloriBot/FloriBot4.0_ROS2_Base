@@ -1,5 +1,0 @@
--
-  ros1_package_name: 'base'
-  ros1_message_name: 'Angle'
-  ros2_package_name: 'base'
-  ros2_message_name: 'Angle'

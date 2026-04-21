@@ -1,11 +1,11 @@
 #ifndef KINEMATICS_PUBLISHER_H
 #define KINEMATICS_PUBLISHER_H
 
-#include "drives/articulated_drive.h"
+#include "drives/articulated_drive.hpp"
 #include <rclcpp/rclcpp.hpp>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/transform_broadcaster.hpp>
+#include <tf2_ros/transform_listener.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <base/msg/angle.hpp>
 #include <nav_msgs/msg/odometry.hpp>

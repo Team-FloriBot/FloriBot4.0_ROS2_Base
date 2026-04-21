@@ -3,7 +3,7 @@ project(plc_connection)
 
 # Standard auf C++17 (ROS2 Humble+ Standard)
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 
 # 1. Pakete finden
