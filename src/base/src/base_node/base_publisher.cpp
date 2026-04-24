@@ -151,7 +151,7 @@ void KinematicsPublisher::SpeedCallback(const base::msg::Wheels::SharedPtr msg)
 
     OdomMsg.pose.pose.position.x = OdomPose.x;
     OdomMsg.pose.pose.position.y = OdomPose.y;
-    OdomMsg.pose.pose.position.z = wheelDiameter_ / 2;
+    OdomMsg.pose.pose.position.z = 0.0;
 
     // According to http://wiki.ros.org/navigation/Tutorials/RobotSetup/Odom the speed has to be in the child_frame
     // in our case base_link which means the robot itself
