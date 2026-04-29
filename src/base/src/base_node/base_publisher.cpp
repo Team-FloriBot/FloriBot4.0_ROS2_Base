@@ -73,6 +73,8 @@ void KinematicsPublisher::createPublisherSubscriber()
 {
     // Odometry Publisher
     OdometryPublisher_ = this->create_publisher<nav_msgs::msg::Odometry>("/odom", 1);
+    // JointState Publisher
+    JointStatePublisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
     // Speed Publisher
     SpeedPublisher_ = this->create_publisher<base::msg::Wheels>("engine/targetSpeed", 1);
     // CmdVel Subscriber
@@ -166,7 +168,17 @@ void KinematicsPublisher::SpeedCallback(const base::msg::Wheels::SharedPtr msg)
 
 void KinematicsPublisher::AngleCallback(const base::msg::Angle::SharedPtr msg)
 {
-
     angle_ = msg->angle;
-    
+
+    // Publish JointState for robot_state_publisher
+    sensor_msgs::msg::JointState joint_state;
+    joint_state.header.stamp = this->get_clock()->now();
+    joint_state.name.push_back("body_angle");
+    joint_state.position.push_back(angle_);
+
+    // Optional: Add wheels if needed for visualization
+    // joint_state.name.push_back("joint_frontLeft");
+    // joint_state.position.push_back(0.0); // Would need integration of speed
+
+    JointStatePublisher_->publish(joint_state);
 }

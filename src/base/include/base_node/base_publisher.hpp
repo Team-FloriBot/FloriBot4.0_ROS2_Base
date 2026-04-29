@@ -33,6 +33,7 @@ private:
     rclcpp::TimerBase::SharedPtr CmdVelTimer_; 
     rclcpp::Publisher<base::msg::Wheels>::SharedPtr SpeedPublisher_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr OdometryPublisher_;
+    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr JointStatePublisher_;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr CmdVelSubscriber_;
     rclcpp::Subscription<base::msg::Wheels>::SharedPtr SpeedSubscriber_;
     rclcpp::Subscription<base::msg::Angle>::SharedPtr AngleSubs_;

@@ -95,8 +95,8 @@
     </inertial>
   </link>
 
-  <joint name="body_angle" type="revolute">
-    <axis xyz="1 0 0"/>
+  <joint name="body_angle_pitch" type="revolute">
+    <axis xyz="0 1 0"/>
     <limit effort="1.0" lower="-1.57" upper="1.57" velocity="0.5"/>
     <parent link="axesFront"/>
     <child link="jointFront"/>
@@ -125,7 +125,7 @@
     </inertial>
   </link>
 
-  <joint name="j_revolute_front_rear" type="revolute">
+  <joint name="body_angle" type="revolute">
     <axis xyz="0 0 1"/>
     <limit effort="1.0" lower="-1.57" upper="1.57" velocity="0.5"/>
     <parent link="jointFront"/>
