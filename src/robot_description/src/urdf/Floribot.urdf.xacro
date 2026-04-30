@@ -23,8 +23,8 @@
   <xacro:property name="wheel_joint_2_mid_joint" value="0.383" />
 
   <xacro:property name="sensor_z" value="0.36" />
-  <xacro:property name="front_sensor_x" value="-0.34" />
-  <xacro:property name="rear_sensor_x" value="0.34" />
+  <xacro:property name="front_sensor_x" value="0.34" />
+  <xacro:property name="rear_sensor_x" value="-0.34" />
   <xacro:property name="camera_z" value="0.47" />
   <!-- <xacro:property name="pi" value="3.141592653589793" /> Muss nicht definiert werden. -->
 
