@@ -2,51 +2,48 @@
 #include "network/udp/udp_socket.hpp"
 #include "network/socket/socket.hpp"
 #include "rclcpp/rclcpp.hpp"
+
 #include <cstdlib>
 #include <memory>
+#include <cmath>
 
 // Konstruktor des Nodes
 PlcConnectionNode::PlcConnectionNode()
 : Node("PlcConnectionNode"),
-ConnectionTimeout_(rclcpp::Duration::from_seconds(PLCTimeout_))
+  ConnectionTimeout_(rclcpp::Duration::from_seconds(1.5))
 {
     seq_ = 0;
+
+    // Datenstruktur vollständig initialisieren
+    Data_ = {};
+
+    // Parameter lesen
+    ReadParams();
+
+    // Timeout nach dem Lesen der Parameter setzen
+    ConnectionTimeout_ = rclcpp::Duration::from_seconds(PLCTimeout_);
 
     // Erstelle einen Transform-Broadcaster
     TFBroadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
-    // Parameter lesen, Socket initialisieren, Subscriber und Publisher erstellen
-    ReadParams();
+    // Socket initialisieren, Subscriber und Publisher erstellen
     InitializeSocket();
     Subscribe();
     CreatePublisher();
 
     // Erstelle einen Service zum Abrufen des Zählerstands
     CountServer_ = this->create_service<plc_connection::srv::GetCount>(
-        "sensors/bodyAngle/getCounter", 
-        std::bind(&PlcConnectionNode::GetCountService, this, std::placeholders::_1, std::placeholders::_2));
-    
+        "sensors/bodyAngle/getCounter",
+        std::bind(
+            &PlcConnectionNode::GetCountService,
+            this,
+            std::placeholders::_1,
+            std::placeholders::_2));
+
     // Erstelle einen Timer für das Senden und Empfangen von Daten
     SendRecvTimer_ = this->create_wall_timer(
         std::chrono::duration<double>(readWritePeriod_),
         std::bind(&PlcConnectionNode::SendRecv, this));
-
-    // Initialisiere die Datenstruktur
-    Data_.From.Speed[0] = 0;
-    Data_.From.Speed[1] = 0;
-    Data_.From.Speed[2] = 0;
-    Data_.From.Speed[3] = 0;
-    Data_.From.Angle = 0;
-
-    Data_.To.Mode = 0;
-    Data_.To.Speed[0] = 0;
-    Data_.To.Speed[1] = 0;
-    Data_.To.Speed[2] = 0;
-    Data_.To.Speed[3] = 0;
-    Data_.To.Dummy[0] = 0;
-    Data_.To.Dummy[1] = 0;
-    Data_.To.Dummy[2] = 0;
-    Data_.To.Dummy[3] = 0;
 }
 
 // Destruktor des Nodes
@@ -74,17 +71,28 @@ void PlcConnectionNode::InitializeSocket()
 
     // Erstelle und konfiguriere den UDP-Socket
     RCLCPP_INFO(this->get_logger(), "Creating UDP Socket");
+
     try
     {
         PLC_Socket_.bindAddress(&tmpAddress);
         RCLCPP_INFO(this->get_logger(), "UDP Socket created on Port %i", OwnPort_);
 
         PLC_Socket_.setReceiveTime(ReceiveTimeoutUsec_, ReceiveTimeoutSec_);
-        RCLCPP_INFO(this->get_logger(), "Receive Timeout for UDP Socket is set to %i seconds and %i usec", ReceiveTimeoutSec_, ReceiveTimeoutUsec_);
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Receive Timeout for UDP Socket is set to %i seconds and %i usec",
+            ReceiveTimeoutSec_,
+            ReceiveTimeoutUsec_);
     }
     catch (const std::runtime_error& e)
     {
-        RCLCPP_ERROR(this->get_logger(), "Error while creating UDP Socket on Port %i\n %s", OwnPort_, e.what());
+        RCLCPP_ERROR(
+            this->get_logger(),
+            "Error while creating UDP Socket on Port %i: %s",
+            OwnPort_,
+            e.what());
+
         rclcpp::shutdown();
     }
 }
@@ -98,13 +106,18 @@ void PlcConnectionNode::ReadParams()
     this->declare_parameter<int>("PLC_Port", 5000);
     this->declare_parameter<int>("Xavier_Port", 5000);
     this->declare_parameter<double>("PLC_Timeout", 1.5);
+
     this->declare_parameter<int>("Receive_Timeout_sec", 0);
-    this->declare_parameter<int>("Receive_Timeout_usec", 500);
+
+    // 500 us war sehr wahrscheinlich zu klein.
+    // 50000 us = 50 ms.
+    this->declare_parameter<int>("Receive_Timeout_usec", 50000);
+
     this->declare_parameter<double>("Period_Send_Read", 0.05);
     this->declare_parameter<int>("ZeroCount_Encoder", 0);
-    this->declare_parameter<float>("CountPerRotation_Encoder", 20000);
-    this->declare_parameter<float>("Engine_Acceleration", 0);
-    this->declare_parameter<float>("Engine_Jerk", 0);
+    this->declare_parameter<float>("CountPerRotation_Encoder", 20000.0f);
+    this->declare_parameter<float>("Engine_Acceleration", 0.0f);
+    this->declare_parameter<float>("Engine_Jerk", 0.0f);
 
     // Lese Parameter aus der Parameterliste
     this->get_parameter("PLC_IP", strTargetIP_);
@@ -119,18 +132,50 @@ void PlcConnectionNode::ReadParams()
     this->get_parameter("CountPerRotation_Encoder", countPerRotation_);
     this->get_parameter("Engine_Acceleration", Data_.To.Accelleration);
     this->get_parameter("Engine_Jerk", Data_.To.Jerk);
-    
+
     ConnectionTimeout_ = rclcpp::Duration::from_seconds(PLCTimeout_);
+
+    if (readWritePeriod_ <= 0.0)
+    {
+        RCLCPP_WARN(
+            this->get_logger(),
+            "Period_Send_Read <= 0. Using fallback value 0.05 s.");
+
+        readWritePeriod_ = 0.05;
+    }
+
+    if (PLCTimeout_ <= 0.0)
+    {
+        RCLCPP_WARN(
+            this->get_logger(),
+            "PLC_Timeout <= 0. Using fallback value 1.5 s.");
+
+        PLCTimeout_ = 1.5;
+        ConnectionTimeout_ = rclcpp::Duration::from_seconds(PLCTimeout_);
+    }
+
+    if (countPerRotation_ == 0.0f)
+    {
+        RCLCPP_WARN(
+            this->get_logger(),
+            "CountPerRotation_Encoder is 0. Using fallback value 20000.");
+
+        countPerRotation_ = 20000.0f;
+    }
 }
 
 // Erstellt die Subscriber für Geschwindigkeit und Modus
 void PlcConnectionNode::Subscribe()
 {
     SpeedSubscriber_ = this->create_subscription<base::msg::Wheels>(
-        "engine/targetSpeed", 1, std::bind(&PlcConnectionNode::SpeedCallback, this, std::placeholders::_1));
+        "engine/targetSpeed",
+        1,
+        std::bind(&PlcConnectionNode::SpeedCallback, this, std::placeholders::_1));
 
     ModeSubscriber_ = this->create_subscription<std_msgs::msg::UInt32>(
-        "engine/mode", 1, std::bind(&PlcConnectionNode::ModeCallback, this, std::placeholders::_1));
+        "engine/mode",
+        1,
+        std::bind(&PlcConnectionNode::ModeCallback, this, std::placeholders::_1));
 }
 
 // Erstellt die Publisher für Geschwindigkeit und Winkel
@@ -156,9 +201,12 @@ void PlcConnectionNode::ModeCallback(const std_msgs::msg::UInt32::SharedPtr msg)
 }
 
 // Service-Funktion zum Abrufen des Zählerstands
-bool PlcConnectionNode::GetCountService(const std::shared_ptr<plc_connection::srv::GetCount::Request> request,
-                        std::shared_ptr<plc_connection::srv::GetCount::Response> response)
+bool PlcConnectionNode::GetCountService(
+    const std::shared_ptr<plc_connection::srv::GetCount::Request> request,
+    std::shared_ptr<plc_connection::srv::GetCount::Response> response)
 {
+    (void)request;
+
     response->count = Data_.From.Angle;
     return true;
 }
@@ -174,38 +222,52 @@ void PlcConnectionNode::SendRecv()
         // Empfangen der Daten von der PLC
         ReadData();
     }
-    catch (std::runtime_error& e)
+    catch (const std::runtime_error& e)
     {
-        // Log the warning if necessary
+        RCLCPP_WARN_THROTTLE(
+            this->get_logger(),
+            *this->get_clock(),
+            1000,
+            "PLC SendRecv failed: %s",
+            e.what());
     }
-    
-    // Veröffentlichen der empfangenen Daten
+
+    // Veröffentlichen der zuletzt gültigen Daten
     PublishData();
 }
 
 // Funktion zum Senden von Daten an die PLC
 void PlcConnectionNode::SendData()
 {
-    // Temporäre Datenstruktur für die Konvertierung
-    PLC_Data tmpData;
+    // Temporäre Datenstruktur für die Konvertierung vollständig initialisieren
+    PLC_Data tmpData{};
+
     htonPLC(&tmpData, &Data_);
 
     // Senden der Daten über den UDP-Socket
-    PLC_Socket_.write((uint8_t*)&tmpData.To, sizeof(Data_.To), &Target_.IP);
+    PLC_Socket_.write(
+        reinterpret_cast<uint8_t*>(&tmpData.To),
+        sizeof(Data_.To),
+        &Target_.IP);
 }
 
 // Funktion zum Empfangen von Daten von der PLC
 bool PlcConnectionNode::ReadData()
 {
-    // Temporäre Datenstruktur für die Konvertierung
-    PLC_Data tmpData;
-    OwnUDP::Address tmpAddress;
+    // Temporäre Datenstruktur für die Konvertierung vollständig initialisieren
+    PLC_Data tmpData{};
+    OwnUDP::Address tmpAddress{};
 
     // Lesen der Daten über den UDP-Socket
-    PLC_Socket_.read((uint8_t*)&tmpData.From, sizeof(Data_.From), &tmpAddress);
+    PLC_Socket_.read(
+        reinterpret_cast<uint8_t*>(&tmpData.From),
+        sizeof(Data_.From),
+        &tmpAddress);
+
+    const uint32_t receivedMessageId = ntohl(tmpData.From.MessageID);
 
     // Überprüfen, ob die empfangene Nachricht neu ist
-    if (ntohl(tmpData.From.MessageID) == Target_.LastID)
+    if (receivedMessageId == Target_.LastID)
     {
         // Überprüfen, ob die Verbindung zur PLC noch besteht
         if ((this->get_clock()->now() - Target_.LastMsgTime).seconds() > ConnectionTimeout_.seconds())
@@ -214,8 +276,10 @@ bool PlcConnectionNode::ReadData()
             {
                 RCLCPP_ERROR(this->get_logger(), "No Connection to PLC");
             }
+
             Target_.ComOk = false;
         }
+
         return false;
     }
 
@@ -240,26 +304,30 @@ void PlcConnectionNode::PublishData()
     tf2::Quaternion q;
 
     // Berechne den Winkel in Radiant basierend auf dem Zählerstand und der Zählung pro Umdrehung
-    float Angle = (((float)Data_.From.Angle - (float)zeroCount_) / countPerRotation_) * 2 * M_PI;
+    const float Angle =
+        (((static_cast<float>(Data_.From.Angle) - static_cast<float>(zeroCount_)) /
+          countPerRotation_) *
+         2.0f *
+         static_cast<float>(M_PI));
 
-    // Setze die Zeitstempel und IDs für die Transformationsnachrich
-    TfAngleMsg.header.stamp = this->get_clock()->now();
+    const auto now = this->get_clock()->now();
+
+    // Setze die Zeitstempel und IDs für die Transformationsnachricht
+    TfAngleMsg.header.stamp = now;
     TfAngleMsg.child_frame_id = "jointRear";
     TfAngleMsg.header.frame_id = "jointFront";
 
     // Setze die Zeitstempel für die Geschwindigkeits- und Winkel-Nachrichten
-    
-    //SpeedMsg.header.stamp = this->get_clock()->now();
-    rclcpp::Clock clock(RCL_SYSTEM_TIME);
-    SpeedMsg.header.stamp = clock.now();
-    AngleMsg.header.stamp = this->get_clock()->now();
-
+    SpeedMsg.header.stamp = now;
+    AngleMsg.header.stamp = now;
 
     // Setze die Transformation basierend auf dem berechneten Winkel
-    q.setRPY(0, 0, Angle);
-    TfAngleMsg.transform.translation.x = 0;
-    TfAngleMsg.transform.translation.y = 0;
-    TfAngleMsg.transform.translation.z = 0;
+    q.setRPY(0.0, 0.0, Angle);
+
+    TfAngleMsg.transform.translation.x = 0.0;
+    TfAngleMsg.transform.translation.y = 0.0;
+    TfAngleMsg.transform.translation.z = 0.0;
+
     TfAngleMsg.transform.rotation.x = q.x();
     TfAngleMsg.transform.rotation.y = q.y();
     TfAngleMsg.transform.rotation.z = q.z();
@@ -285,6 +353,11 @@ void PlcConnectionNode::PublishData()
 // Funktion zum Konvertieren von Netzwerk- zu Host-Daten
 void ntohPLC(PLC_Data* Host, PLC_Data* Network)
 {
+    if (Host == nullptr || Network == nullptr)
+    {
+        return;
+    }
+
     Host->From.MessageID = ntohl(Network->From.MessageID);
     Host->From.Mode = ntohl(Network->From.Mode);
     Host->From.Angle = ntohl(Network->From.Angle);
@@ -303,6 +376,11 @@ void ntohPLC(PLC_Data* Host, PLC_Data* Network)
 // Funktion zum Konvertieren von Host- zu Netzwerk-Daten
 void htonPLC(PLC_Data* Network, PLC_Data* Host)
 {
+    if (Host == nullptr || Network == nullptr)
+    {
+        return;
+    }
+
     Network->To.MessageID = htonl(Host->To.MessageID++);
     Network->To.Mode = htonl(Host->To.Mode);
     Network->To.Jerk = OwnSocket::htonf(Host->To.Jerk);
