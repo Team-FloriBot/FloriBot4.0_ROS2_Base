@@ -87,13 +87,13 @@ void PlcConnectionNode::InitializeSocket()
     }
     catch (const std::runtime_error& e)
     {
-        RCLCPP_ERROR(
-            this->get_logger(),
-            "Error while creating UDP Socket on Port %i: %s",
-            OwnPort_,
-            e.what());
+    RCLCPP_ERROR(
+        this->get_logger(),
+        "Error while creating UDP Socket on Port %i: %s",
+        OwnPort_,
+        e.what());
 
-        rclcpp::shutdown();
+    throw;
     }
 }
 
