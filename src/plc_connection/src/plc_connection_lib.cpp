@@ -115,9 +115,9 @@ void PlcConnectionNode::ReadParams()
 
     this->declare_parameter<double>("Period_Send_Read", 0.05);
     this->declare_parameter<int>("ZeroCount_Encoder", 0);
-    this->declare_parameter<float>("CountPerRotation_Encoder", 20000.0f);
-    this->declare_parameter<float>("Engine_Acceleration", 0.0f);
-    this->declare_parameter<float>("Engine_Jerk", 0.0f);
+    this->declare_parameter<float>("CountPerRotation_Encoder", 20000.0);
+    this->declare_parameter<float>("Engine_Acceleration", 0.0);
+    this->declare_parameter<float>("Engine_Jerk", 0.0);
 
     // Lese Parameter aus der Parameterliste
     this->get_parameter("PLC_IP", strTargetIP_);
