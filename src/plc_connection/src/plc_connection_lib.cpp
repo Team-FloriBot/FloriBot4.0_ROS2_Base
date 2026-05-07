@@ -95,12 +95,12 @@ void PlcConnectionNode::InitializeSocket()
     }
     catch (const std::runtime_error& e)
     {
-        RCLCPP_FATAL(
-            this->get_logger(),
-            "UDP bind failed on %s:%i. Is another plc_connection_node already running? Error: %s",
-            strOwnIP_.empty() ? "0.0.0.0" : strOwnIP_.c_str(),
-            OwnPort_,
-            e.what());
+
+    RCLCPP_ERROR(
+        this->get_logger(),
+        "Error while creating UDP Socket on Port %i: %s",
+        OwnPort_,
+        e.what());
 
         throw;
     }
@@ -123,9 +123,9 @@ void PlcConnectionNode::ReadParams()
 
     this->declare_parameter<double>("Period_Send_Read", 0.05);
     this->declare_parameter<int>("ZeroCount_Encoder", 0);
-    this->declare_parameter<double>("CountPerRotation_Encoder", 20000.0);
-    this->declare_parameter<double>("Engine_Acceleration", 0.0);
-    this->declare_parameter<double>("Engine_Jerk", 0.0);
+    this->declare_parameter<float>("CountPerRotation_Encoder", 20000.0);
+    this->declare_parameter<float>("Engine_Acceleration", 0.0);
+    this->declare_parameter<float>("Engine_Jerk", 0.0);
 
     this->get_parameter("PLC_IP", strTargetIP_);
     this->get_parameter("Xavier_IP", strOwnIP_);
@@ -136,6 +136,7 @@ void PlcConnectionNode::ReadParams()
     this->get_parameter("Receive_Timeout_usec", ReceiveTimeoutUsec_);
     this->get_parameter("Period_Send_Read", readWritePeriod_);
     this->get_parameter("ZeroCount_Encoder", zeroCount_);
+<<<<<<< HEAD
 
     double count_per_rotation = 20000.0;
     double engine_acceleration = 0.0;
@@ -148,6 +149,11 @@ void PlcConnectionNode::ReadParams()
     countPerRotation_ = static_cast<float>(count_per_rotation);
     Data_.To.Accelleration = static_cast<float>(engine_acceleration);
     Data_.To.Jerk = static_cast<float>(engine_jerk);
+=======
+    this->get_parameter("CountPerRotation_Encoder", countPerRotation_);
+    this->get_parameter("Engine_Acceleration", Data_.To.Accelleration);
+    this->get_parameter("Engine_Jerk", Data_.To.Jerk);
+>>>>>>> parent of 14edbd0 (Update plc_connection_lib.cpp)
 
     if (readWritePeriod_ <= 0.0)
     {
