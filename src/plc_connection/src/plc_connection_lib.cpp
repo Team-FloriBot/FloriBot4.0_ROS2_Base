@@ -136,24 +136,10 @@ void PlcConnectionNode::ReadParams()
     this->get_parameter("Receive_Timeout_usec", ReceiveTimeoutUsec_);
     this->get_parameter("Period_Send_Read", readWritePeriod_);
     this->get_parameter("ZeroCount_Encoder", zeroCount_);
-<<<<<<< HEAD
 
-    double count_per_rotation = 20000.0;
-    double engine_acceleration = 0.0;
-    double engine_jerk = 0.0;
-
-    this->get_parameter("CountPerRotation_Encoder", count_per_rotation);
-    this->get_parameter("Engine_Acceleration", engine_acceleration);
-    this->get_parameter("Engine_Jerk", engine_jerk);
-
-    countPerRotation_ = static_cast<float>(count_per_rotation);
-    Data_.To.Accelleration = static_cast<float>(engine_acceleration);
-    Data_.To.Jerk = static_cast<float>(engine_jerk);
-=======
     this->get_parameter("CountPerRotation_Encoder", countPerRotation_);
     this->get_parameter("Engine_Acceleration", Data_.To.Accelleration);
     this->get_parameter("Engine_Jerk", Data_.To.Jerk);
->>>>>>> parent of 14edbd0 (Update plc_connection_lib.cpp)
 
     if (readWritePeriod_ <= 0.0)
     {
