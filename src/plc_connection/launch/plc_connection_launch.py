@@ -10,7 +10,7 @@ def generate_launch_description():
         # PLC / Xavier network configuration
         DeclareLaunchArgument('plc_ip', default_value='192.168.0.43'),
         DeclareLaunchArgument('plc_port', default_value='50000'),
-        DeclareLaunchArgument('xavier_ip', default_value='192.168.0.42'),
+        DeclareLaunchArgument('xavier_ip', default_value=''),
         DeclareLaunchArgument('xavier_port', default_value='50000'),
 
         # Testserver configuration
