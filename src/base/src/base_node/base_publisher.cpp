@@ -1,61 +1,63 @@
 #include "base_node/base_publisher.hpp"
-#include <rclcpp/rclcpp.hpp>
+
+#include <base/msg/wheels.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <base/msg/wheels.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
+
 #include <memory>
 
 // Klassendefinition des Kinematics Node
-
 KinematicsPublisher::KinematicsPublisher()
-: Node("Kinematics"), angle_(0.0)
+: Node("Kinematics"),
+  angle_(0.0)
 {
-    // Parameter erhalten
+    // Parameter einlesen
     getParam();
-    // Drive Parameter setzen
+
+    // Drive-Parameter setzen
     Drive_.setParam(axesLength_, wheelDiameter_, frontLength_, rearLength_);
+
     // Publisher und Subscriber erstellen
     createPublisherSubscriber();
-    // tf Broadcaster erstellen
+
+    // TF-Broadcaster für odom -> base_footprint erstellen
     tf_broadaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-    // Timer für PublishSpped Publisher
-    CmdVelTimer_ = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&KinematicsPublisher::PublishSpeed, this));
 
-
+    // Timer für Sollgeschwindigkeit
+    CmdVelTimer_ = this->create_wall_timer(
+        std::chrono::milliseconds(100),
+        std::bind(&KinematicsPublisher::PublishSpeed, this));
 }
 
 KinematicsPublisher::~KinematicsPublisher() {}
 
-// Publisher
-// ---------------------------
-// Published Speed der Räder
-// läuft alle 100ms
+// Publiziert die Sollgeschwindigkeit der Räder zyklisch
 void KinematicsPublisher::PublishSpeed()
 {
     base::msg::Wheels tmp;
 
     tmp.header.stamp = this->get_clock()->now();
-    tmp.front_left = Speedmsg_.front_left;
+
+    tmp.front_left  = Speedmsg_.front_left;
     tmp.front_right = Speedmsg_.front_right;
-    tmp.rear_left = Speedmsg_.rear_left;
-    tmp.rear_right = Speedmsg_.rear_right;
+    tmp.rear_left   = Speedmsg_.rear_left;
+    tmp.rear_right  = Speedmsg_.rear_right;
 
-    SpeedPublisher_->publish(Speedmsg_);
+    SpeedPublisher_->publish(tmp);
 
-    Speedmsg_.front_left = 0;
-    Speedmsg_.front_right = 0;
-    Speedmsg_.rear_right = 0;
-    Speedmsg_.rear_left = 0;
+    Speedmsg_.front_left  = 0.0;
+    Speedmsg_.front_right = 0.0;
+    Speedmsg_.rear_left   = 0.0;
+    Speedmsg_.rear_right  = 0.0;
 }
 
 // Parameter einlesen
-// ---------------------------
-void KinematicsPublisher::getParam() {
+void KinematicsPublisher::getParam()
+{
     this->declare_parameter("axesLength", 0.335);
     this->declare_parameter("wheelDiameter", 0.28);
     this->declare_parameter("frontLength", 0.38);
@@ -68,117 +70,133 @@ void KinematicsPublisher::getParam() {
 }
 
 // Publisher und Subscriber erstellen
-// ---------------------------
 void KinematicsPublisher::createPublisherSubscriber()
 {
     // Odometry Publisher
-    OdometryPublisher_ = this->create_publisher<nav_msgs::msg::Odometry>("/odom", 1);
-    // JointState Publisher
-    JointStatePublisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
-    // Speed Publisher
-    SpeedPublisher_ = this->create_publisher<base::msg::Wheels>("engine/targetSpeed", 1);
-    // CmdVel Subscriber
-    CmdVelSubscriber_ = this->create_subscription<geometry_msgs::msg::Twist>(
-        "cmd_vel", 1, std::bind(&KinematicsPublisher::CmdVelCallback, this, std::placeholders::_1));
-    // Speed Subscriber
-    SpeedSubscriber_ = this->create_subscription<base::msg::Wheels>(
-        "engine/actualSpeed", 1, std::bind(&KinematicsPublisher::SpeedCallback, this, std::placeholders::_1));
-    // Subscriber für joint_states erstellen
-    AngleSubs_ = this->create_subscription<base::msg::Angle>(
-        "/sensors/bodyAngle", 10, std::bind(&KinematicsPublisher::AngleCallback, this, std::placeholders::_1));
+    OdometryPublisher_ =
+        this->create_publisher<nav_msgs::msg::Odometry>("/odom", 1);
+
+    // JointState Publisher für robot_state_publisher
+    JointStatePublisher_ =
+        this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
+
+    // Sollgeschwindigkeit an PLC
+    SpeedPublisher_ =
+        this->create_publisher<base::msg::Wheels>("engine/targetSpeed", 1);
+
+    // cmd_vel von Nav2 / Teleop
+    CmdVelSubscriber_ =
+        this->create_subscription<geometry_msgs::msg::Twist>(
+            "cmd_vel",
+            1,
+            std::bind(
+                &KinematicsPublisher::CmdVelCallback,
+                this,
+                std::placeholders::_1));
+
+    // Istgeschwindigkeit von PLC
+    SpeedSubscriber_ =
+        this->create_subscription<base::msg::Wheels>(
+            "engine/actualSpeed",
+            1,
+            std::bind(
+                &KinematicsPublisher::SpeedCallback,
+                this,
+                std::placeholders::_1));
+
+    // Knickwinkel von PLC
+    AngleSubs_ =
+        this->create_subscription<base::msg::Angle>(
+            "/sensors/bodyAngle",
+            10,
+            std::bind(
+                &KinematicsPublisher::AngleCallback,
+                this,
+                std::placeholders::_1));
 }
 
-// CmdVel Subscriber
-// ---------------------------
-// Berechnet Speed der Räder aus cmd_vel topic
-void KinematicsPublisher::CmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
+// Berechnet Soll-Radgeschwindigkeiten aus cmd_vel
+void KinematicsPublisher::CmdVelCallback(
+    const geometry_msgs::msg::Twist::SharedPtr msg)
 {
-    articulatedWheelSpeed Wheelspeed;
-    // Berechnung der Wheelspeed über die Inverse (siehe articulated_drive.cpp)
-    Wheelspeed = Drive_.inverseKinematics(*msg, angle_);
+    articulatedWheelSpeed wheelspeed;
 
-    // Zusammenstellen der Nachricht für Speed Publisher
-    Speedmsg_.front_left = Wheelspeed.Front.leftWheel;
-    Speedmsg_.front_right = Wheelspeed.Front.rightWheel;
-    Speedmsg_.rear_left = Wheelspeed.Rear.leftWheel;
-    Speedmsg_.rear_right = Wheelspeed.Rear.rightWheel;
+    wheelspeed = Drive_.inverseKinematics(*msg, angle_);
+
+    Speedmsg_.front_left  = wheelspeed.Front.leftWheel;
+    Speedmsg_.front_right = wheelspeed.Front.rightWheel;
+    Speedmsg_.rear_left   = wheelspeed.Rear.leftWheel;
+    Speedmsg_.rear_right  = wheelspeed.Rear.rightWheel;
 }
 
-// Speed Subscriber
-// ---------------------------
-// Berechnet Odometry und Transformationsmatrix aus aktuellen Rad Speed
+// Berechnet Odometry und TF odom -> base_footprint aus Ist-Radgeschwindigkeit
 void KinematicsPublisher::SpeedCallback(const base::msg::Wheels::SharedPtr msg)
 {
-    articulatedWheelSpeed ActualSpeed;
-    geometry_msgs::msg::Pose2D OdomPose;
-    geometry_msgs::msg::TransformStamped Transform;
-    nav_msgs::msg::Odometry OdomMsg;
+    articulatedWheelSpeed actual_speed;
+    geometry_msgs::msg::Pose2D odom_pose;
+    geometry_msgs::msg::TransformStamped transform_msg;
+    nav_msgs::msg::Odometry odom_msg;
     tf2::Quaternion q;
 
-    ActualSpeed.Front.leftWheel = msg->front_left;
-    ActualSpeed.Front.rightWheel = msg->front_right;
-    ActualSpeed.Rear.leftWheel = msg->rear_left;
-    ActualSpeed.Rear.rightWheel = msg->rear_right;
-    rclcpp::Time stamp(msg->header.stamp.sec,msg->header.stamp.nanosec);
+    actual_speed.Front.leftWheel  = msg->front_left;
+    actual_speed.Front.rightWheel = msg->front_right;
+    actual_speed.Rear.leftWheel   = msg->rear_left;
+    actual_speed.Rear.rightWheel  = msg->rear_right;
 
-    OdomPose = Drive_.forwardKinematics(ActualSpeed, stamp);
+    rclcpp::Time stamp(msg->header.stamp);
 
-    // Front Msg
-    q.setRPY(0, 0, OdomPose.theta);
+    odom_pose = Drive_.forwardKinematics(actual_speed, stamp);
 
-    // TF Msg
-    Transform.header.frame_id = "odom";
-    Transform.child_frame_id = "base_footprint";
-    Transform.header.stamp = msg->header.stamp;
+    q.setRPY(0.0, 0.0, odom_pose.theta);
+    q.normalize();
 
-    Transform.transform.translation.x = OdomPose.x;
-    Transform.transform.translation.y = OdomPose.y;
-    Transform.transform.translation.z = 0.0;
+    // TF: odom -> base_footprint
+    transform_msg.header.stamp = msg->header.stamp;
+    transform_msg.header.frame_id = "odom";
+    transform_msg.child_frame_id = "base_footprint";
 
-    Transform.transform.rotation.w = q.getW();
-    Transform.transform.rotation.x = q.getX();
-    Transform.transform.rotation.y = q.getY();
-    Transform.transform.rotation.z = q.getZ();
+    transform_msg.transform.translation.x = odom_pose.x;
+    transform_msg.transform.translation.y = odom_pose.y;
+    transform_msg.transform.translation.z = 0.0;
 
-    // ToDo: Add Covariance
-    // Odom Msg
-    OdomMsg.child_frame_id = "base_footprint";
-    OdomMsg.header.frame_id = "odom";
-    OdomMsg.header.stamp = msg->header.stamp;
+    transform_msg.transform.rotation.x = q.x();
+    transform_msg.transform.rotation.y = q.y();
+    transform_msg.transform.rotation.z = q.z();
+    transform_msg.transform.rotation.w = q.w();
 
-    OdomMsg.pose.pose.orientation.w = q.getW();
-    OdomMsg.pose.pose.orientation.x = q.getX();
-    OdomMsg.pose.pose.orientation.y = q.getY();
-    OdomMsg.pose.pose.orientation.z = q.getZ();
+    // Odometry
+    odom_msg.header.stamp = msg->header.stamp;
+    odom_msg.header.frame_id = "odom";
+    odom_msg.child_frame_id = "base_footprint";
 
-    OdomMsg.pose.pose.position.x = OdomPose.x;
-    OdomMsg.pose.pose.position.y = OdomPose.y;
-    OdomMsg.pose.pose.position.z = 0.0;
+    odom_msg.pose.pose.position.x = odom_pose.x;
+    odom_msg.pose.pose.position.y = odom_pose.y;
+    odom_msg.pose.pose.position.z = 0.0;
 
-    // According to http://wiki.ros.org/navigation/Tutorials/RobotSetup/Odom the speed has to be in the child_frame
-    // in our case base_link which means the robot itself
+    odom_msg.pose.pose.orientation.x = q.x();
+    odom_msg.pose.pose.orientation.y = q.y();
+    odom_msg.pose.pose.orientation.z = q.z();
+    odom_msg.pose.pose.orientation.w = q.w();
 
-    OdomMsg.twist.twist = Drive_.getSpeed();
+    // Geschwindigkeit im child_frame
+    odom_msg.twist.twist = Drive_.getSpeed();
 
-    // publish
-    OdometryPublisher_->publish(OdomMsg);
-
-    tf_broadaster_->sendTransform(Transform);
+    OdometryPublisher_->publish(odom_msg);
+    tf_broadaster_->sendTransform(transform_msg);
 }
 
+// Publiziert body_angle als JointState für robot_state_publisher
 void KinematicsPublisher::AngleCallback(const base::msg::Angle::SharedPtr msg)
 {
     angle_ = msg->angle;
 
-    // Publish JointState for robot_state_publisher
     sensor_msgs::msg::JointState joint_state;
-    joint_state.header.stamp = this->get_clock()->now();
+
+    // Möglichst Timestamp der Winkelmessung verwenden
+    joint_state.header.stamp = msg->header.stamp;
+
     joint_state.name.push_back("body_angle");
     joint_state.position.push_back(angle_);
-
-    // Optional: Add wheels if needed for visualization
-    // joint_state.name.push_back("joint_frontLeft");
-    // joint_state.position.push_back(0.0); // Would need integration of speed
 
     JointStatePublisher_->publish(joint_state);
 }
