@@ -87,9 +87,10 @@ void PlcConnectionNode::InitializeSocket()
     }
     catch (const std::runtime_error& e)
     {
-    RCLCPP_ERROR(
+    RCLCPP_FATAL(
         this->get_logger(),
-        "Error while creating UDP Socket on Port %i: %s",
+        "UDP bind failed on %s:%i. Is another plc_connection_node already running? Error: %s",
+        strOwnIP_.empty() ? "0.0.0.0" : strOwnIP_.c_str(),
         OwnPort_,
         e.what());
 
@@ -115,9 +116,9 @@ void PlcConnectionNode::ReadParams()
 
     this->declare_parameter<double>("Period_Send_Read", 0.05);
     this->declare_parameter<int>("ZeroCount_Encoder", 0);
-    this->declare_parameter<float>("CountPerRotation_Encoder", 20000.0);
-    this->declare_parameter<float>("Engine_Acceleration", 0.0);
-    this->declare_parameter<float>("Engine_Jerk", 0.0);
+    this->declare_parameter<double>("CountPerRotation_Encoder", 20000.0);
+    this->declare_parameter<double>("Engine_Acceleration", 0.0);
+    this->declare_parameter<double>("Engine_Jerk", 0.0);
 
     // Lese Parameter aus der Parameterliste
     this->get_parameter("PLC_IP", strTargetIP_);
@@ -129,9 +130,17 @@ void PlcConnectionNode::ReadParams()
     this->get_parameter("Receive_Timeout_usec", ReceiveTimeoutUsec_);
     this->get_parameter("Period_Send_Read", readWritePeriod_);
     this->get_parameter("ZeroCount_Encoder", zeroCount_);
-    this->get_parameter("CountPerRotation_Encoder", countPerRotation_);
-    this->get_parameter("Engine_Acceleration", Data_.To.Accelleration);
-    this->get_parameter("Engine_Jerk", Data_.To.Jerk);
+    double count_per_rotation = 20000.0;
+    double engine_acceleration = 0.0;
+    double engine_jerk = 0.0;
+
+    this->get_parameter("CountPerRotation_Encoder", count_per_rotation);
+    this->get_parameter("Engine_Acceleration", engine_acceleration);
+    this->get_parameter("Engine_Jerk", engine_jerk);
+
+    countPerRotation_ = static_cast<float>(count_per_rotation);
+    Data_.To.Accelleration = static_cast<float>(engine_acceleration);
+    Data_.To.Jerk = static_cast<float>(engine_jerk);
 
     ConnectionTimeout_ = rclcpp::Duration::from_seconds(PLCTimeout_);
 
