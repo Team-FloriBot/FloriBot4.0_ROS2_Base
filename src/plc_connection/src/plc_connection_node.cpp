@@ -4,23 +4,30 @@ int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
 
-    auto node = std::make_shared<PlcConnectionNode>();
-
     try
     {
+        auto node = std::make_shared<PlcConnectionNode>();
         rclcpp::spin(node);
     }
     catch (const std::exception& e)
     {
         RCLCPP_ERROR(
-            rclcpp::get_logger(node->get_name()),
+            rclcpp::get_logger("PLC_Connection"),
             "PLC connection node exited with exception: %s",
             e.what());
 
-        rclcpp::shutdown();
+        if (rclcpp::ok())
+        {
+            rclcpp::shutdown();
+        }
+
         return 1;
     }
 
-    rclcpp::shutdown();
+    if (rclcpp::ok())
+    {
+        rclcpp::shutdown();
+    }
+
     return 0;
 }
