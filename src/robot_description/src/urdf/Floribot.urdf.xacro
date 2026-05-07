@@ -323,7 +323,7 @@
     </plugin>
   </gazebo>
 
-  <link name="front_laser_link">
+  <link name="sick_front_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -410,7 +410,7 @@
     <origin xyz="${rear_sensor_x} 0 ${sensor_z}" rpy="${pi} 0 ${pi}"/>
   </joint>
 
-  <gazebo reference="rear_laser_link">
+  <gazebo reference="sick_rear_link">
     <sensor name="rear_laser" type="gpu_lidar">
       <pose>0 0 0 0 0 0</pose>
       <topic>/sensors/scan_rear</topic>
